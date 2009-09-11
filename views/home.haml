@@ -1,0 +1,255 @@
+:style
+  .foobar
+    :color red
+
+:script
+  function is_integer(i) {
+    return i - Math.floor(i) == 0.0
+  }
+
+  var month_days = [
+    31,
+    28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31 
+  ];
+
+  var months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec'
+  ];
+  
+  $(function() {
+
+    var today = new Date(),
+      leap_year = (new Date(Date.parse('29 Feb 2009')).getMonth() == 1),
+      day_of_week = new Date(Date.parse('1 Jan 2009')).getDay(),
+      days_in_year = leap_year ? 366 : 365,
+      month_offsets = [0],
+      height=800,
+      width=900,
+      margin=75,
+      i=0,
+      paper = Raphael('totally-circular',width,height),
+      cx = width/2,
+      cy = height/2,
+      radius = ( Math.min(width,height) / 2 ) - margin,
+      inner_radius = radius * 0.75,
+      month = -1,
+      next_trans = 0,
+      last_trans = 0,
+      this_day   = today.getDate(),
+      this_month = today.getMonth(),
+      year = new Date().getFullYear(),
+      degrees_per_day = 360.0 / days_in_year,
+      half_degrees_per_day = degrees_per_day/2.0;
+
+
+    for(i=0; i<month_days.length; i++) {
+      month_offsets[i+1] = month_offsets[i] + month_days[i];
+    }
+
+    month_days[1] = leap_year ? 29 : 28;
+
+    //paper.circle(cx,cy,radius);
+    //paper.circle(cx,cy,inner_radius);
+
+    // year
+    var year_label = paper.text(cx,cy,year.toString()).attr({'font-size':'48px'});
+
+    /*
+    // axes
+    paper.path().attr({'stroke':'cyan'}).moveTo(cx,cy).lineTo(cx,cy-radius)
+    paper.path().attr({'stroke':'green'}).moveTo(cx,cy).lineTo(cx,cy-radius).rotate(-90,cx,cy)
+    paper.path().attr({'stroke':'yellow'}).moveTo(cx,cy).lineTo(cx,cy-radius).rotate(-180,cx,cy)
+    paper.path().attr({'stroke':'magenta'}).moveTo(cx,cy).lineTo(cx,cy-radius).rotate(-270,cx,cy)
+    */
+
+
+    // day wedge
+    var dx = Math.cos((270-degrees_per_day)/180*Math.PI),
+        dy = Math.sin((270-degrees_per_day)/180*Math.PI);
+
+    var day = paper.path()
+                   .attr({'fill':'green'})
+                   .moveTo(cx,cy-radius)
+                   .arcTo(radius, radius, 0, 1, radius*dx+cx, radius*dy+cy, degrees_per_day)
+                   .lineTo(inner_radius*dx+cx, inner_radius*dy+cy)
+                   .arcTo(inner_radius, inner_radius, 0, 1, cx, cy-inner_radius, -degrees_per_day)
+                   .andClose();
+
+    day.remove();
+
+    var day_path = day.attr('path');
+
+    var days = [],
+      days_of_the_month=[],
+      month_map=[],
+      days_of_the_week=[];
+
+    // draw the days
+    for(var i=0; i<days_in_year; i++) {
+      var angle = -i * degrees_per_day;
+
+      var day_wedge = paper.path(day_path).rotate(angle, cx, cy),
+        day_colour;
+
+      if(day_of_week == 0 || day_of_week == 6) {
+        day_colour = '#f0f0f0';
+      } else {
+        day_colour = 'white';
+      }
+
+      days_of_the_week.push(day_of_week);
+      day_wedge.attr({'fill':day_colour,'stroke-width':'.5px'})
+
+      $(day_wedge).data('index',i);
+
+      day_wedge.mouseover(function() {
+        var i = $(this).data('index'),
+          date = days_of_the_month[i]+1,
+          month = month_map[i]+1;
+
+        this.attr({'fill':'#ccc'});
+
+        year_label.attr({text:''+year+'/'+month+'/'+date})
+      });
+
+      day_wedge.mouseout(function() {
+        var day_colour, day_of_week = days_of_the_week[ $(this).data('index') ];
+
+        if(day_of_week == 0 || day_of_week == 6) {
+          day_colour = '#f0f0f0';
+        } else {
+          day_colour = 'white';
+        }
+
+        this.attr({'fill':day_colour});
+        year_label.attr({text:year})
+      });
+
+      days.push(day_wedge);
+
+      if(i == next_trans) {
+
+        paper.path()
+          .attr({'stroke':'#aaa'})
+          .moveTo(cx,cy-inner_radius+10)
+          .lineTo(cx,cy-radius-10)
+          .rotate(angle,cx,cy);
+
+
+        month      += 1;
+        paper.text(cx+radius+50, cy, months[month]).attr({'text-anchor':'middle', 'font-size':'32px'}).rotate(angle-15-90,cx,cy);
+
+        last_trans = next_trans;
+        next_trans += month_days[month];
+      }
+
+      var day   = i-last_trans;
+      days_of_the_month.push(day);
+      month_map.push(month);
+
+      if(month == this_month && day == this_day) {
+        var h = 20;
+        paper.path()
+          .attr({'fill':'blue','stroke':'none'})
+             .moveTo(cx,cy)
+             .relatively()
+             .lineTo(-5,-h)
+             .lineTo(10,0)
+             .absolutely()
+             .lineTo(cx,cy)
+             .translate(0,-radius)
+             .rotate(angle+half_degrees_per_day,cx,cy)
+      }
+
+      day_of_week += 1
+      day_of_week %= 7
+    }
+
+    function date_offset(date) {
+      return month_offsets[date[0]-1] + date[1]-1
+    }
+
+    var ring_width = 6;
+
+    function range(from,to) {
+      var from_i = date_offset(from),
+        to_i = date_offset(to),
+        delta = to_i-from_i,
+        ring_radius = radius + ring_width/2;
+
+      var dx = Math.cos((270-delta*degrees_per_day-1)/180*Math.PI),
+          dy = Math.sin((270-delta*degrees_per_day-1)/180*Math.PI);
+
+      var angle = -from_i*degrees_per_day;
+
+      var r = paper.path()
+         .attr({'stroke':'green','stroke-width':ring_width+'px'})
+         .moveTo(cx,cy-ring_radius)
+         .arcTo(ring_radius, ring_radius, 0, 0, ring_radius*dx+cx, ring_radius*dy+cy, delta*degrees_per_day)
+         .rotate(angle,cx,cy);
+
+      r.mouseover(function() {
+        this.attr({'stroke':'red'});
+      });
+      r.mouseout(function() {
+        this.attr({'stroke':'green'});
+      });
+    }
+
+    function event(date) {
+      var date_i = date_offset(date),
+        ring_radius = radius + ring_width/2
+
+      paper.circle(cx,cy,ring_width/2)
+        .attr({'stroke':'none','fill':'green'})
+        .translate(0,-ring_radius)
+        .rotate(-date_i*degrees_per_day-half_degrees_per_day,cx,cy)
+    }
+
+    // narooma
+    range([10,15], [10,29]);
+
+    // railscamp
+    range([11,20], [11,23]);
+
+    // josh & eisha
+    event([10,31]);
+
+    //christmas
+    event([12,25])
+    // .au day
+    event([1,26])
+
+    // bdays
+    event([11,9]);
+    event([11,22]);
+    event([6,20]);
+    event([7,7]);
+    event([7,23]);
+    event([9,7]);
+  });
+
+%h1 circal
+
+#totally-circular
