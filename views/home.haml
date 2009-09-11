@@ -62,6 +62,14 @@
       degrees_per_day = 360.0 / days_in_year,
       half_degrees_per_day = degrees_per_day/2.0;
 
+    var options = {
+      weekend_wedge_fill: '#f0f0f0',
+      wedge_fill: 'white',
+      wedge_stroke: '#aaa',
+      wedge_hi: '#ccc'
+    };
+
+
 
     for(i=0; i<month_days.length; i++) {
       month_offsets[i+1] = month_offsets[i] + month_days[i];
@@ -89,7 +97,6 @@
         dy = Math.sin((270-degrees_per_day)/180*Math.PI);
 
     var day = paper.path()
-                   .attr({'fill':'green'})
                    .moveTo(cx,cy-radius)
                    .arcTo(radius, radius, 0, 1, radius*dx+cx, radius*dy+cy, degrees_per_day)
                    .lineTo(inner_radius*dx+cx, inner_radius*dy+cy)
@@ -100,10 +107,10 @@
 
     var day_path = day.attr('path');
 
-    var days = [],
-      days_of_the_month=[],
-      month_map=[],
-      days_of_the_week=[];
+    var days            = [],
+      days_of_the_month = [],
+      month_map         = [],
+      days_of_the_week  = [];
 
     // draw the days
     for(var i=0; i<days_in_year; i++) {
@@ -113,13 +120,13 @@
         day_colour;
 
       if(day_of_week == 0 || day_of_week == 6) {
-        day_colour = '#f0f0f0';
+        day_colour = options.weekend_wedge_fill;
       } else {
-        day_colour = 'white';
+        day_colour = options.wedge_fill;
       }
 
       days_of_the_week.push(day_of_week);
-      day_wedge.attr({'fill':day_colour,'stroke-width':'.5px'})
+      day_wedge.attr({fill:day_colour, stroke: options.wedge_stroke, 'stroke-width':'.5px'})
 
       $(day_wedge).data('index',i);
 
@@ -128,7 +135,7 @@
           date = days_of_the_month[i]+1,
           month = month_map[i]+1;
 
-        this.attr({'fill':'#ccc'});
+        this.attr({'fill':options.wedge_hi});
 
         year_label.attr({text:''+year+'/'+month+'/'+date})
       });
@@ -137,9 +144,9 @@
         var day_colour, day_of_week = days_of_the_week[ $(this).data('index') ];
 
         if(day_of_week == 0 || day_of_week == 6) {
-          day_colour = '#f0f0f0';
+          day_colour = options.weekend_wedge_fill;
         } else {
-          day_colour = 'white';
+          day_colour = options.wedge_fill;
         }
 
         this.attr({'fill':day_colour});
